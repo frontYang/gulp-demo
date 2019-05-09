@@ -21,13 +21,16 @@ const proxyMiddleware = require('http-proxy-middleware'); // 反向代理
 var baseDir = './dist'
 const config = {
   baseDir: baseDir,
+  copyDir: {
+    src: 'src/lib/**/*',
+    dest: baseDir + '/lib/'
+  },
   cssDir: {
     src: 'src/css/*.scss',
     dest: baseDir + '/css'
   },
   jsDir: {
-    src_es6: 'src/js/**/*.js',
-    src: 'src/lib/**/*.js',
+    src: 'src/js/**/*.js',
     dest: baseDir + '/js'
   },
   htmlDir: {
@@ -36,7 +39,7 @@ const config = {
     dest: baseDir + '/'
   },
   imgDir: {
-    src:  'src/images/*.png',    
+    src:  'src/images/*.png',
     src_icon: 'src/images/icons/*.png',
     dest: baseDir + '/images',
     dest_icon: baseDir + '/'
@@ -65,11 +68,16 @@ gulp.task('browserSync', function(){
   });
 })
 
+gulp.task('copy',  function() {
+  return gulp.src(config.copyDir.src)
+    .pipe(gulp.dest(config.copyDir.dest))
+});
+
 gulp.task('mock', function(){
   return gulp.src(config.mockDir)
     .pipe(mockServer({
       port: 8091,
-      host: '192.168.3.24',
+      host: '192.168.0.102',
       allowCrossOrigin: true
     }))
 })
@@ -86,8 +94,8 @@ gulp.task('sass', function(){
     .pipe(gulp.dest(config.cssDir.dest))
 })
 
-gulp.task('babel', function(){  
-  return gulp.src(config.jsDir.src_es6)
+gulp.task('babel', function(){
+  return gulp.src(config.jsDir.src)
     .pipe(babel({
       presets: ['@babel/env'],
       plugins: ['@babel/transform-runtime']
@@ -96,13 +104,6 @@ gulp.task('babel', function(){
     .pipe(reload({ stream: true}))
     .pipe(uglify())
     .pipe(rename({suffix: '.min'}))
-    .pipe(gulp.dest(config.jsDir.dest))
-})
-
-gulp.task('scripts', function(){
-  return gulp.src(config.jsDir.src)
-    .pipe(gulp.dest(config.jsDir.dest))
-    .pipe(reload({ stream: true}))
     .pipe(gulp.dest(config.jsDir.dest))
 })
 
@@ -125,8 +126,10 @@ gulp.task('spritesmith', function() {
         cssName: 'css/block/icons.css',
         padding: 2// 每个图片之间的间距，默认为0px
     }))
-
-    .pipe(gulp.dest(config.imgDir.dest_icon))
+    // .pipe(cleanCss(({compatibility: 'ie7'})))
+    // .pipe(rename({suffix: '.min'}))
+    // .pipe(gulp.dest(config.imgDir.dest_icon))
+    .pipe(reload({ stream: true}))
 });
 
 gulp.task('images', function() {
@@ -150,8 +153,8 @@ gulp.task('clean', function() {
 
 gulp.task('watch', function() {
   gulp.watch(config.cssDir.src, ['sass']);
-  gulp.watch(config.jsDir.src_es6, ['babel']);
-  gulp.watch(config.jsDir.src, ['scripts']);
+  gulp.watch(config.copyDir.src, ['copy']);
+  gulp.watch(config.jsDir.src, ['babel']);
   gulp.watch(config.htmlDir.src_all, ['concat']);
 })
 
@@ -161,9 +164,9 @@ gulp.task('build', function(callback) {
     'images',
     'spritesmith',
     'sass',
+    'copy',
     'babel',
-    'scripts',
-    'concat',     
+    'concat',
     'mock',
     callback
   )
@@ -175,9 +178,9 @@ gulp.task('dev', function(callback) {
     'images',
     'spritesmith',
     'sass',
+    'copy',
     'babel',
-    'scripts',
-    'concat',    
+    'concat',
     'browserSync', 'mock'], 'watch',
     callback
   )
