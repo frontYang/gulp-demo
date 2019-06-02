@@ -1,0 +1,120 @@
+/*
+Icon classes can be used entirely standalone. They are named after their original file names.
+
+Example usage in HTML:
+
+`display: block` sprite:
+<div class="icon-home"></div>
+
+To change `display` (e.g. `display: inline-block;`), we suggest using a common CSS class:
+
+// CSS
+.icon {
+  display: inline-block;
+}
+
+// HTML
+<i class="icon icon-home"></i>
+*/
+.icon-close {
+  background-image: url(../../images/icons.png);
+  background-position: -253px -215px;
+  width: 22px;
+  height: 22px;
+}
+.icon-closeimg {
+  background-image: url(../../images/icons.png);
+  background-position: -45px -146px;
+  width: 45px;
+  height: 45px;
+}
+.icon-mailbox {
+  background-image: url(../../images/icons.png);
+  background-position: -92px -146px;
+  width: 44px;
+  height: 44px;
+}
+.icon-password {
+  background-image: url(../../images/icons.png);
+  background-position: 0px -146px;
+  width: 43px;
+  height: 48px;
+}
+.icon-phone {
+  background-image: url(../../images/icons.png);
+  background-position: 0px -196px;
+  width: 35px;
+  height: 50px;
+}
+.icon-qq {
+  background-image: url(../../images/icons.png);
+  background-position: -138px -146px;
+  width: 43px;
+  height: 43px;
+}
+.icon-server {
+  background-image: url(../../images/icons.png);
+  background-position: 0px 0px;
+  width: 144px;
+  height: 144px;
+}
+.icon-star-current {
+  background-image: url(../../images/icons.png);
+  background-position: -81px -196px;
+  width: 42px;
+  height: 40px;
+}
+.icon-star-default {
+  background-image: url(../../images/icons.png);
+  background-position: -37px -196px;
+  width: 42px;
+  height: 40px;
+}
+.icon-success {
+  background-image: url(../../images/icons.png);
+  background-position: -146px 0px;
+  width: 105px;
+  height: 106px;
+}
+.icon-telephone {
+  background-image: url(../../images/icons.png);
+  background-position: -253px 0px;
+  width: 34px;
+  height: 43px;
+}
+.icon-thumb-down-cur {
+  background-image: url(../../images/icons.png);
+  background-position: -253px -45px;
+  width: 30px;
+  height: 32px;
+}
+.icon-thumb-down-default {
+  background-image: url(../../images/icons.png);
+  background-position: -253px -79px;
+  width: 30px;
+  height: 32px;
+}
+.icon-thumb-up-cur {
+  background-image: url(../../images/icons.png);
+  background-position: -253px -113px;
+  width: 30px;
+  height: 32px;
+}
+.icon-thumb-up-default {
+  background-image: url(../../images/icons.png);
+  background-position: -253px -147px;
+  width: 30px;
+  height: 32px;
+}
+.icon-thumb-up {
+  background-image: url(../../images/icons.png);
+  background-position: -253px -181px;
+  width: 30px;
+  height: 32px;
+}
+.icon-wechat {
+  background-image: url(../../images/icons.png);
+  background-position: -183px -146px;
+  width: 47px;
+  height: 39px;
+}

@@ -76,8 +76,8 @@ const config = {
   imgDir: {
     src:  'src/images/*.png',
     src_icon: 'src/images/icons/*.png',
-    dest: baseDir + '/images',
-    dest_icon: baseDir + '/'
+    dest: 'src/images',
+    dest_icon: 'src/images'
   },
   mockDir: './data'
 }
@@ -140,7 +140,7 @@ gulp.task('views',  function() {
 });
 
 // sass编译
-gulp.task('sass', function(){
+gulp.task('sass', ['spritesmith', 'images'], function(){
   return gulp.src(config.cssDir.src)
     .pipe(sass({outputStyle: 'compact'}).on('error', sass.logError))
     .pipe(dgbl())
@@ -148,7 +148,6 @@ gulp.task('sass', function(){
     .pipe(reload({ stream: true}))
     .pipe(gulpif(env != 'dev', cleanCss(({compatibility: 'ie7'}))))
     .pipe(gulpif(env != 'dev', rev()))
-    // .pipe(gulpif(env != 'dev', rename({suffix: '.min'})))
     .pipe(gulp.dest(config.cssDir.dest))
     .pipe(gulpif(env != 'rev', rev.manifest('./rev/rev-manifest.json', {
       base: './rev',
@@ -185,12 +184,12 @@ gulp.task('spritesmith', function() {
     })))
     .pipe(spritesmith({
         imgName: 'images/icons.png', //合并后大图的名称
-        cssName: 'css/block/icons.css',
+        cssName: 'css/block/icons.scss',
         padding: 2, // 每个图片之间的间距，默认为0px
         cssFormat: 'css'
     }))
     .pipe(reload({ stream: true}))
-    .pipe(gulp.dest(config.imgDir.dest_icon))
+    .pipe(gulp.dest('src'))
 
 });
 
@@ -254,8 +253,6 @@ gulp.task('watch', function() {
 gulp.task('build', function(callback) {
   runSequence(
       ['clean:dist',
-      'images',
-      'spritesmith',
       'lib',
       'views'],
       'html',
@@ -267,13 +264,9 @@ gulp.task('build', function(callback) {
 gulp.task('dev', function(callback) {
   runSequence([
     'clean:dist',
-    'images',
-    'spritesmith',
-    'sass',
     'html',
     'lib',
     'views',
-    'babel',
     'browserSync',
     'mock',
     ], 'watch',
