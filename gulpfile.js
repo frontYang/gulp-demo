@@ -15,18 +15,53 @@ const spritesmith = require('gulp.spritesmith'); // 图片精灵
 const cache = require('gulp-cache'); // 缓存代理任务。，减少图片重复压缩
 const del = require('del'); // 清理生成文件
 const mockServer = require('gulp-mock-server'); // mock数据
-const rename = require('gulp-rename'); // 重命名，主要用来命名压缩文件
+// const rename = require('gulp-rename'); // 重命名，主要用来命名压缩文件
 const proxyMiddleware = require('http-proxy-middleware'); // 反向代理
+const gulpif = require('gulp-if'); // 判断
+const rev = require('gulp-rev'); // 增加md5版本号
+const revCollector = require('gulp-rev-collector'); // 替换版本号链接
 
-var baseDir = './dist'
+// 环境变量
+const env = process.env.NODE_ENV.replace(/\s+/g, "");
+
+// 构建文件夹
+const baseDir = env == 'dev' ? './dist' : './public';
+
+// 需代理的接口域名
+const apiDomain = [
+  {
+    target: 'http://a.111.com',
+    file: '/api',
+    pathRewrite: {
+      '^/api': '/api'
+    }
+  },
+  {
+    target: 'http://localhost:8091',
+    file: '/api',
+    pathRewrite: {
+      '^/api': '/api'
+    }
+  }
+];
+
+// mock数据主域
+const host = 'localhost';
+
 const config = {
   baseDir: baseDir,
-  copyDir: {
+  libDir: {
     src: 'src/lib/**/*',
     dest: baseDir + '/lib/'
   },
+  viewsDir: {
+    src: 'src/views/**/*',
+    dest: baseDir + '/views/'
+  },
   cssDir: {
     src: 'src/css/*.scss',
+    src_all: 'src/css/**/*.scss',
+    css_all: 'src/css/**/*.css',
     dest: baseDir + '/css'
   },
   jsDir: {
@@ -44,78 +79,105 @@ const config = {
     dest: baseDir + '/images',
     dest_icon: baseDir + '/'
   },
-  mockDir: './data/'
+  mockDir: './data'
 }
 
+
+// 服务器
 gulp.task('browserSync', function(){
   // 跨域反向代理
-  var middleware = proxyMiddleware('/user_api', {
-      target: 'http://passport.910app.com', // 需代理的域名
-      changeOrigin: true,             // for vhosted sites, changes host header to match to target's host
-      logLevel: 'debug',
-      pathRewrite: {
-          '^/user_api': '/user_api'
-      }
-  });
+  var middleware = function(){
+    var middle = []
+
+    for(var i = 0; i < apiDomain.length; i++){
+      middle.push(proxyMiddleware(apiDomain[i].file, {
+        target: apiDomain[i].target,
+        changeOrigin: true,             // for vhosted sites, changes host header to match to target's host
+        logLevel: 'debug',
+        pathRewrite: apiDomain[i].pathRewrite
+      }))
+    }
+    return middle
+  }
 
   browserSync.init({
       server: {
           baseDir: config.baseDir,
           port: 3000,
-          middleware: [middleware],
+          middleware: middleware(),
       },
-      startPath: '/'
+      startPath: ''
   });
 })
 
-gulp.task('copy',  function() {
-  return gulp.src(config.copyDir.src)
-    .pipe(gulp.dest(config.copyDir.dest))
-});
-
+// mock数据
 gulp.task('mock', function(){
   return gulp.src(config.mockDir)
     .pipe(mockServer({
       port: 8091,
-      host: '192.168.0.102',
-      allowCrossOrigin: true
+      host: host,
+      allowCrossOrigin: true,
+      open: true
     }))
 })
 
+
+// 拷贝lib
+gulp.task('lib',  function() {
+  return gulp.src(config.libDir.src)
+    .pipe(reload({ stream: true}))
+    .pipe(gulp.dest(config.libDir.dest))
+});
+
+// 拷贝views
+gulp.task('views',  function() {
+  return gulp.src(config.viewsDir.src)
+    .pipe(contentIncluder({
+        includerReg:/<!\-\-\#include\s+virtual="([^"]+)"\-\->/g
+    }))
+    .pipe(reload({ stream: true}))
+    .pipe(gulp.dest(config.viewsDir.dest))
+});
+
+// sass编译
 gulp.task('sass', function(){
   return gulp.src(config.cssDir.src)
     .pipe(sass({outputStyle: 'compact'}).on('error', sass.logError))
     .pipe(dgbl())
     .pipe(postcss([autoprefixer({browsers: ['last 2 versions', 'Android > 4.4','iOS >= 8', 'Firefox >= 20', 'ie >= 7']})]))
-    .pipe(gulp.dest(config.cssDir.dest))
     .pipe(reload({ stream: true}))
-    .pipe(cleanCss(({compatibility: 'ie7'})))
-    .pipe(rename({suffix: '.min'}))
+    .pipe(gulpif(env != 'dev', cleanCss(({compatibility: 'ie7'}))))
+    .pipe(gulpif(env != 'dev', rev()))
+    // .pipe(gulpif(env != 'dev', rename({suffix: '.min'})))
     .pipe(gulp.dest(config.cssDir.dest))
+    .pipe(gulpif(env != 'rev', rev.manifest('./rev/rev-manifest.json', {
+      base: './rev',
+      merge: true
+    })))
+    .pipe(gulp.dest('./rev'))
 })
 
+// es6编译(模块语法不支持)
 gulp.task('babel', function(){
   return gulp.src(config.jsDir.src)
     .pipe(babel({
       presets: ['@babel/env'],
       plugins: ['@babel/transform-runtime']
     }))
-    .pipe(gulp.dest(config.jsDir.dest))
+
     .pipe(reload({ stream: true}))
-    .pipe(uglify())
-    .pipe(rename({suffix: '.min'}))
+    .pipe(gulpif(env != 'dev',uglify()))
+    .pipe(gulpif(env != 'dev', rev()))
+    // .pipe(gulpif(env != 'dev',rename({suffix: '.min'})))
     .pipe(gulp.dest(config.jsDir.dest))
+    .pipe(gulpif(env != 'dev', rev.manifest('./rev/rev-manifest.json',{
+      base: './rev',
+      merge: true
+    })))
+    .pipe(gulpif(env != 'dev', gulp.dest('./rev')))
 })
 
-gulp.task('concat',function() {
-  return gulp.src(config.htmlDir.src)
-    .pipe(contentIncluder({
-        includerReg:/<!\-\-\#include\s+virtual="([^"]+)"\-\->/g
-    }))
-    .pipe(gulp.dest(config.htmlDir.dest))
-    .pipe(reload({ stream: true}))
-});
-
+// 图片精灵+优化
 gulp.task('spritesmith', function() {
   return gulp.src(config.imgDir.src_icon)
     .pipe(cache(imagemin({
@@ -124,64 +186,97 @@ gulp.task('spritesmith', function() {
     .pipe(spritesmith({
         imgName: 'images/icons.png', //合并后大图的名称
         cssName: 'css/block/icons.css',
-        padding: 2// 每个图片之间的间距，默认为0px
+        padding: 2, // 每个图片之间的间距，默认为0px
+        cssFormat: 'css'
     }))
-    // .pipe(cleanCss(({compatibility: 'ie7'})))
-    // .pipe(rename({suffix: '.min'}))
-    // .pipe(gulp.dest(config.imgDir.dest_icon))
     .pipe(reload({ stream: true}))
+    .pipe(gulp.dest(config.imgDir.dest_icon))
+
 });
 
+// 图片优化
 gulp.task('images', function() {
   return gulp.src(config.imgDir.src)
     .pipe(cache(imagemin({
       interlaced: true,
     })))
-
+    .pipe(reload({ stream: true}))
     .pipe(gulp.dest(config.imgDir.dest))
 });
 
-gulp.task('clean:dist', function() {
-  return del.sync(['dist/**/*', '!dist/images', '!dist/images/**/*']);
+// 公共模块引用 + 静态文件版本号
+gulp.task('html', ['sass', 'babel'], function() {
+  return gulp.src(['./rev/*.json', 'src/index.html'])
+    .pipe(contentIncluder({
+        includerReg:/<!\-\-\#include\s+virtual="([^"]+)"\-\->/g
+    }))
+    .pipe(gulpif(env != 'dev', revCollector({
+      replaceReved: true
+    })))
+    .pipe(reload({ stream: true}))
+    .pipe(gulp.dest(config.htmlDir.dest))
 });
 
+
+// 清除文件
+gulp.task('clean:dist', function() {
+  return del.sync([
+    ''+ baseDir +'/css',
+    ''+ baseDir +'/js',
+    ''+ baseDir +'/lib',
+    ''+ baseDir +'/rev',
+    ''+ baseDir +'/views',
+    ''+ baseDir +'/*.html',
+    ''+ baseDir +'/*.json',
+    '!'+ baseDir +'/images'], {
+      force: true
+    })
+});
+
+// 清除缓存
 gulp.task('clean', function() {
   return del.sync('dist').then(function(cb) {
     return cache.clearAll(cb);
   });
 })
 
+// 监听
 gulp.task('watch', function() {
   gulp.watch(config.cssDir.src, ['sass']);
-  gulp.watch(config.copyDir.src, ['copy']);
+  gulp.watch(config.cssDir.src_all, ['sass']);
+  gulp.watch(config.htmlDir.src_all, ['html', 'views']);
+  gulp.watch(config.libDir.src, ['lib']);
+  gulp.watch(config.viewsDir.src, ['views']);
   gulp.watch(config.jsDir.src, ['babel']);
-  gulp.watch(config.htmlDir.src_all, ['concat']);
 })
 
+// build
 gulp.task('build', function(callback) {
   runSequence(
-    'clean:dist',
-    'images',
-    'spritesmith',
-    'sass',
-    'copy',
-    'babel',
-    'concat',
-    'mock',
+      ['clean:dist',
+      'images',
+      'spritesmith',
+      'lib',
+      'views'],
+      'html',
     callback
   )
 })
 
+// dev
 gulp.task('dev', function(callback) {
   runSequence([
     'clean:dist',
     'images',
     'spritesmith',
     'sass',
-    'copy',
+    'html',
+    'lib',
+    'views',
     'babel',
-    'concat',
-    'browserSync', 'mock'], 'watch',
+    'browserSync',
+    'mock',
+    ], 'watch',
     callback
   )
 })
