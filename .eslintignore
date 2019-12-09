@@ -1,0 +1,9 @@
+/src/data/
+/src/assets/
+/dist/
+/build/
+/src/js/modules/lib
+/src/lib
+/node_modules/
+gulpfile.js
+*.html
