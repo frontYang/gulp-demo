@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "set NODE_ENV=dev && gulp dev",
     "build": "set NODE_ENV=prop && gulp build",
+    "lint": "eslint",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -48,6 +49,15 @@
     "merge-stream": "^1.0.1",
     "mockjs": "^1.0.1-beta3",
     "run-sequence": "^2.2.1"
+  },
+  "gitHooks": {
+    "pre-commit": "lint-staged"
+  },
+  "lint-staged": {
+    "*.{js,vue}": [
+      "lint",
+      "git add"
+    ]
   },
   "engines": {
     "node": "^10.15.3",
